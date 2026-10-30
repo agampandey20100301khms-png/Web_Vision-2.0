@@ -11,7 +11,8 @@ This is an independent educational project, not an official MAIT service. It is 
 - Verified profile highlights: established in 1999, 13 engineering disciplines, and 10 campus blocks, as described in MAIT's institute profile.
 - Notice feed sourced from MAIT’s public website, with source links, published dates, and clearly separated dates extracted from attached PDFs.
 - Prospective-student guide with the current MAIT-published fee and hostel tables, 2026–27 admission links, published engineering programmes, NBA record links, and AICTE approval documents. Fee and source metadata are refreshed from MAIT’s public pages.
-- A source-grounded retrieval assistant for admissions, fees, programmes, scholarships, accreditation, placements, and the current course-filtered notice feed. Answers link to the MAIT pages used.
+- A source-grounded college assistant that returns concise answers with official source links. Notice cards include short summaries extracted from the linked MAIT article or its PDF when readable.
+- A lightweight 3D campus presentation: move the pointer over campus photos to tilt them. Touch input and reduced-motion preferences are respected.
 - Institute, career-development, academic-calendar, contact, and legal links.
 - Separate student portal and course-scoped demo dashboard for Lavish Hurria, with sample attendance, marks, and notices.
 - A locally bundled illustrative stock portrait; it is not verified to depict the demo student.
@@ -29,11 +30,19 @@ The logo and campus images are served from `public/images`. Only live notices an
 
 The college information endpoint fetches a fixed list of public MAIT pages and refreshes its in-process cache every ten minutes. If a source cannot be reached or its fee table cannot be parsed, the page reports that state and links to the official source instead of presenting estimated values.
 
-## Local Qwen assistant
+## Local FreeLLMAPI assistant
 
-The development API uses Ollama on `127.0.0.1:11434` for local Qwen generation, grounded in retrieved excerpts from official MAIT pages. The default model is `qwen3.5:4b`; set `MAIT_OLLAMA_MODEL` to use another model already installed in Ollama. On a new machine, install Ollama and pull the chosen model, then keep the Ollama service running while using the assistant. If Ollama is unavailable, the assistant reports that and shows matching official excerpts.
+The local assistant can use the OpenAI-compatible FreeLLMAPI endpoint. It retrieves matching official MAIT excerpts first, then asks the selected model for a short answer. Fees, admissions guidance and accreditation records use direct source-derived answers; notice summaries are extracted from MAIT articles/PDFs and do not wait for a model.
 
-The Vercel deployment does not connect to a developer’s machine or expose an Ollama endpoint. Online answers use source-linked retrieval from the same official pages; model generation remains local-only unless a separately hosted, secured inference service is deliberately configured.
+Copy `.env.example` to `.env.local`, then fill in the exact model ID and API key from FreeLLMAPI. Vite loads these server-side variables on startup; `.env.local` is ignored by Git. Restart the dev server after changing the file.
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+The key is sent only from the local API server to FreeLLMAPI; it is not included in browser code. FreeLLMAPI requires an API key—the signed-in playground session is not automatically shared with this app. If the key or model ID is not configured, the assistant still answers from brief, cited official excerpts.
+
+The deployed Vercel app cannot reach a developer’s `localhost:3001`. It uses official-source retrieval unless a separately hosted OpenAI-compatible endpoint, model ID and secret API key are configured in Vercel environment variables. Do not configure the local loopback URL on Vercel.
 
 ## Demo access
 

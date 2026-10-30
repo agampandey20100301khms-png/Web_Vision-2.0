@@ -31,6 +31,36 @@ function cleanText(value) {
   return decodeHtml(value.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
+function summarizeNoticeText(value, title) {
+  const text = value.replace(/\s+/g, " ").trim();
+  const titleIndex = text.toLowerCase().indexOf(title.toLowerCase());
+  const withoutTitle = titleIndex >= 0
+    ? `${text.slice(0, titleIndex)} ${text.slice(titleIndex + title.length)}`.trim()
+    : text;
+  const sentences = withoutTitle.split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length >= 24
+      && !/\b(click here|download|read more|dated\s*:)\b/i.test(sentence)
+      && !/^(maharaja agrasen institute of technology|guru gobind singh indraprastha university)\b/i.test(sentence));
+  if (!sentences.length) return "";
+  let summary = sentences.slice(0, 2).join(" ");
+  if (summary.length > 240) {
+    const shortened = summary.slice(0, 237);
+    summary = `${shortened.slice(0, shortened.lastIndexOf(" ")).trimEnd()}…`;
+  }
+  return summary;
+}
+
+function summarizeNoticePage(html, title) {
+  const article = html.match(/<div\b[^>]*class=["'][^"']*\bastroid-article-text\b[^"']*["'][\s\S]*?<\/main>/i)?.[0];
+  if (!article) return "";
+  const paragraphs = [...article.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+    .map((match) => cleanText(match[1]))
+    .filter((paragraph) => paragraph.length >= 24
+      && !/^(maharaja agrasen institute of technology|guru gobind singh indraprastha university)\b/i.test(paragraph));
+  return summarizeNoticeText(paragraphs.join(" ") || cleanText(article), title);
+}
+
 function inferCategory(title) {
   if (/\b(admission|admitted|counselling|counseling)\b/i.test(title)) return "Admissions";
   if (/\b(exam|date sheet|mid[- ]term|end[- ]term|timetable|time table|result)\b/i.test(title)) return "Examinations";
@@ -219,6 +249,7 @@ async function parsePdfDetails(url) {
       return {
         date: dateFromText(text),
         documentDates: extractDocumentDates(text),
+        summary: summarizeNoticeText(text, ""),
       };
     } finally {
       await loadingTask.destroy();
@@ -238,6 +269,8 @@ async function addPublishedDates(notices) {
       try {
         const html = await fetchPage(notice.url);
         let date = parsePublishedDate(html);
+        let summary = summarizeNoticePage(html, notice.title);
+        let summarySource = summary ? "article" : "";
         let documentDates = [];
         const pdfUrl = findPdfLink(html, notice.url);
         if (pdfUrl) {
@@ -245,13 +278,26 @@ async function addPublishedDates(notices) {
             const pdfDetails = await parsePdfDetails(pdfUrl);
             date ??= pdfDetails.date;
             documentDates = pdfDetails.documentDates;
+            if (!summary && pdfDetails.summary) {
+              summary = pdfDetails.summary;
+              summarySource = "pdf";
+            }
           } catch (error) {
             console.warn(`Could not extract dates from ${pdfUrl}: ${error.message}`);
           }
         }
-        result[index] = { ...notice, date, documentDates };
+        if (!summary) {
+          summary = `Title-based summary: ${notice.title}. Open the official notice for full instructions.`;
+          summarySource = "title";
+        }
+        result[index] = { ...notice, date, documentDates, summary, summarySource };
       } catch (error) {
         console.warn(`Could not read the publication date for ${notice.url}: ${error.message}`);
+        result[index] = {
+          ...notice,
+          summary: `Title-based summary: ${notice.title}. Open the official notice for full instructions.`,
+          summarySource: "title",
+        };
       }
     }
   }

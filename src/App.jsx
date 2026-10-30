@@ -58,6 +58,20 @@ function ThemeToggle({ theme, onToggle }) {
   );
 }
 
+function updateCardTilt(event) {
+  if (event.pointerType === "touch" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const bounds = event.currentTarget.getBoundingClientRect();
+  const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+  const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+  event.currentTarget.style.setProperty("--card-tilt-x", `${-y * 7}deg`);
+  event.currentTarget.style.setProperty("--card-tilt-y", `${x * 9}deg`);
+}
+
+function resetCardTilt(event) {
+  event.currentTarget.style.setProperty("--card-tilt-x", "0deg");
+  event.currentTarget.style.setProperty("--card-tilt-y", "0deg");
+}
+
 function NoticeCard({ notice, compact = false }) {
   return (
     <a
@@ -78,9 +92,11 @@ function NoticeCard({ notice, compact = false }) {
         </div>
         <h3>{notice.title}</h3>
         <p>
-          {notice.documentDates?.length
+          {notice.summary
+            ? notice.summary
+            : notice.documentDates?.length
             ? `Dates listed in the attached PDF: ${notice.documentDates.slice(0, 5).map((date) => formatDate(date, { day: "numeric", month: "short" })).join(", ")}${notice.documentDates.length > 5 ? ` +${notice.documentDates.length - 5} more` : ""}.`
-            : "Open the original notice for full details and attachments."}
+            : "A text summary is not available; open the original notice for full details."}
         </p>
       </div>
       <span className="notice-arrow" aria-hidden="true">↗</span>
@@ -101,6 +117,7 @@ function NoticeSummary({ notices, dashboard = false }) {
     .map((category) => ({ category, count: notices.filter((notice) => notice.category === category).length }))
     .filter((entry) => entry.count);
   const datedCount = notices.filter((notice) => notice.date).length;
+  const summarizedCount = notices.filter((notice) => ["article", "pdf"].includes(notice.summarySource)).length;
 
   if (!notices.length) return null;
 
@@ -112,7 +129,7 @@ function NoticeSummary({ notices, dashboard = false }) {
         <p>
           {notices.length} {notices.length === 1 ? "update" : "updates"}{categoriesSummary.length
             ? ` across ${categoriesSummary.map(({ category }) => category.toLowerCase()).join(", ")}`
-            : ""}. {datedCount} {datedCount === 1 ? "has" : "have"} a published date. Open each source for full details.
+            : ""}. {summarizedCount} {summarizedCount === 1 ? "has" : "have"} an article/PDF summary; {datedCount} {datedCount === 1 ? "has" : "have"} a published date. Open each source for full details.
         </p>
       </div>
       <span className="summary-count">{notices.length}<small> UPDATES</small></span>
@@ -149,7 +166,14 @@ function NoticeAssistant({ notices, student }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: prompt,
-          notices: availableNotices.slice(0, 30),
+          notices: availableNotices.slice(0, 30).map((notice) => ({
+            title: notice.title,
+            url: notice.url,
+            date: notice.date,
+            category: notice.category,
+            summary: notice.summary,
+            summarySource: notice.summarySource,
+          })),
         }),
       });
       const result = await response.json();
@@ -178,18 +202,22 @@ function NoticeAssistant({ notices, student }) {
             <div><strong>{student ? "Your MAIT guide" : "MAIT college guide"}</strong><small>{engine || "Official-source RAG"}</small></div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close notice assistant">×</button>
           </div>
-          <p className="assistant-intro">Ask about admissions, fees, courses, scholarships, accreditation, placements or notices. Answers are grounded in MAIT’s published pages.</p>
+          <p className="assistant-intro">Ask a direct question about MAIT. Answers are brief and grounded in live official pages and notice summaries.</p>
           {answer && <p className="assistant-answer" role="status">{answer}</p>}
           {answerLoading && <p className="assistant-answer" role="status">Searching current official sources and preparing a grounded answer…</p>}
           {warning && <p className="assistant-warning" role="status">{warning}</p>}
           {sources.map((source) => (
-            <a className="assistant-result" href={source.url} target="_blank" rel="noreferrer" key={`${source.id}-${source.url}`}>
-              <span>{source.title} · Source checked {formatDate(source.checkedAt.slice(0, 10))}</span>
-              <strong>{source.excerpt}</strong>
-            </a>
+            <details className="assistant-result" key={`${source.id}-${source.url}`}>
+              <summary>
+                <span>{source.title} · Checked {formatDate(source.checkedAt.slice(0, 10))}</span>
+                <strong>View matching excerpt</strong>
+              </summary>
+              <p>{source.excerpt}</p>
+              <a href={source.url} target="_blank" rel="noreferrer">Open official source ↗</a>
+            </details>
           ))}
           <form onSubmit={askAssistant} className="assistant-form">
-            <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about admissions, fees…" aria-label="Ask the MAIT college guide" maxLength={1000} />
+            <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask a direct question…" aria-label="Ask the MAIT college guide" maxLength={1000} />
             <button type="submit" aria-label="Send question" disabled={answerLoading || !question.trim()}>↑</button>
           </form>
         </section>
@@ -444,7 +472,7 @@ function CampusGallery() {
       </div>
       <div className="campus-gallery">
         {photos.map((photo) => (
-          <figure className={`campus-photo ${photo.className}`} key={photo.src}>
+          <figure className={`campus-photo ${photo.className}`} key={photo.src} onPointerMove={updateCardTilt} onPointerLeave={resetCardTilt}>
             <img src={photo.src} alt={photo.alt} loading="lazy" />
             <figcaption>
               <span>{photo.caption}</span>
@@ -452,7 +480,7 @@ function CampusGallery() {
             </figcaption>
           </figure>
         ))}
-        <figure className="campus-photo campus-map-card">
+        <figure className="campus-photo campus-map-card" onPointerMove={updateCardTilt} onPointerLeave={resetCardTilt}>
           <iframe
             src="https://maps.google.com/maps?q=Maharaja%20Agrasen%20Institute%20of%20Technology%2C%20Rohini%2C%20Delhi&t=k&z=17&output=embed"
             title="Satellite map of Maharaja Agrasen Institute of Technology in Rohini"
@@ -711,7 +739,7 @@ function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noti
               <span className="live-dot" /> ACADEMICS · CAMPUS · OPPORTUNITY
             </div>
           </div>
-          <figure className="hero-visual">
+          <figure className="hero-visual" onPointerMove={updateCardTilt} onPointerLeave={resetCardTilt}>
             <img src="/images/mait-campus-courtyard-small.jpg" alt="Courtyard fountain at the MAIT campus in Rohini" />
             <figcaption><span>MAIT CAMPUS · ROHINI</span><a href={OFFICIAL_HOME_URL} target="_blank" rel="noreferrer">Photograph: official MAIT website ↗</a></figcaption>
           </figure>
