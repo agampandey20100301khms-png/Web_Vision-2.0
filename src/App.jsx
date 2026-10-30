@@ -28,6 +28,22 @@ function Brand({ onClick }) {
   );
 }
 
+function ThemeToggle({ theme, onToggle }) {
+  const nextTheme = theme === "light" ? "dark" : "light";
+  return (
+    <button
+      className="theme-toggle"
+      type="button"
+      onClick={onToggle}
+      aria-label={`Switch to ${nextTheme} mode`}
+      aria-pressed={theme === "dark"}
+    >
+      <span aria-hidden="true">{theme === "light" ? "☾" : "☀"}</span>
+      {nextTheme} mode
+    </button>
+  );
+}
+
 function NoticeCard({ notice, compact = false }) {
   return (
     <a
@@ -381,7 +397,7 @@ function LoginCard({ onLogin }) {
   );
 }
 
-function HomePage({ onStudentLogin, notices, loading, noticeError, archive, setArchive }) {
+function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noticeError, archive, setArchive }) {
   const archiveMonths = useMemo(() => {
     const counts = new Map();
     notices.forEach((notice) => {
@@ -400,7 +416,7 @@ function HomePage({ onStudentLogin, notices, loading, noticeError, archive, setA
   }, [notices]);
 
   return (
-    <div className="public-site">
+    <div className="public-site" data-theme={theme}>
       <header className="site-header">
         <Brand onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         <nav className="main-nav" aria-label="Main navigation">
@@ -410,6 +426,7 @@ function HomePage({ onStudentLogin, notices, loading, noticeError, archive, setA
           <a href="#placements">Careers</a>
           <a href="#resources">Information</a>
         </nav>
+        <ThemeToggle theme={theme} onToggle={onThemeToggle} />
         <button className="header-login" type="button" onClick={onStudentLogin}>Student portal <span aria-hidden="true">↗</span></button>
       </header>
       <main>
@@ -472,11 +489,12 @@ function HomePage({ onStudentLogin, notices, loading, noticeError, archive, setA
   );
 }
 
-function StudentPortalPage({ onLogin, onBack }) {
+function StudentPortalPage({ theme, onThemeToggle, onLogin, onBack }) {
   return (
-    <div className="portal-site">
+    <div className="portal-site" data-theme={theme}>
       <header className="site-header portal-header">
         <Brand onClick={onBack} />
+        <ThemeToggle theme={theme} onToggle={onThemeToggle} />
         <button className="header-login" type="button" onClick={onBack}>Back to MAIT <span aria-hidden="true">↗</span></button>
       </header>
       <main className="portal-layout">
@@ -515,13 +533,14 @@ function Avatar({ name }) {
   );
 }
 
-function Dashboard({ student, notices, loading, noticeError, onLogout }) {
+function Dashboard({ theme, onThemeToggle, student, notices, loading, noticeError, onLogout }) {
   const firstName = student.name.split(" ")[0];
   return (
-    <>
+    <div className="dashboard-site" data-theme={theme}>
       <header className="site-header dashboard-header">
         <Brand onClick={onLogout} />
         <div className="dashboard-context"><span className="live-dot" /> STUDENT SPACE <span>/</span> {student.program}</div>
+        <ThemeToggle theme={theme} onToggle={onThemeToggle} />
         <button className="header-login" type="button" onClick={onLogout}>Sign out <span aria-hidden="true">↗</span></button>
       </header>
       <main className="dashboard-layout">
@@ -567,7 +586,7 @@ function Dashboard({ student, notices, loading, noticeError, onLogout }) {
         </section>
       </main>
       <SiteFooter />
-    </>
+    </div>
   );
 }
 
@@ -604,6 +623,13 @@ function SiteFooter() {
 export default function App() {
   const [student, setStudent] = useState(null);
   const [studentPortalOpen, setStudentPortalOpen] = useState(false);
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("mait-theme") === "dark" ? "dark" : "light";
+    } catch {
+      return "light";
+    }
+  });
   const [notices, setNotices] = useState([]);
   const [noticeError, setNoticeError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -639,11 +665,23 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function toggleTheme() {
+    setTheme((currentTheme) => currentTheme === "light" ? "dark" : "light");
+  }
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mait-theme", theme);
+    } catch {
+      console.warn("Unable to save the selected appearance preference.");
+    }
+  }, [theme]);
+
   if (student) {
-    return <Dashboard student={student} notices={notices} loading={loading} noticeError={noticeError} onLogout={handleLogout} />;
+    return <Dashboard theme={theme} onThemeToggle={toggleTheme} student={student} notices={notices} loading={loading} noticeError={noticeError} onLogout={handleLogout} />;
   }
 
   return studentPortalOpen
-    ? <StudentPortalPage onLogin={handleLogin} onBack={() => setStudentPortalOpen(false)} />
-    : <HomePage onStudentLogin={() => { setStudentPortalOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} notices={notices} loading={loading} noticeError={noticeError} archive={archive} setArchive={setArchive} />;
+    ? <StudentPortalPage theme={theme} onThemeToggle={toggleTheme} onLogin={handleLogin} onBack={() => setStudentPortalOpen(false)} />
+    : <HomePage theme={theme} onThemeToggle={toggleTheme} onStudentLogin={() => { setStudentPortalOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} notices={notices} loading={loading} noticeError={noticeError} archive={archive} setArchive={setArchive} />;
 }

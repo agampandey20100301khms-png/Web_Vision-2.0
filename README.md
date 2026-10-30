@@ -7,6 +7,7 @@ This is an independent educational project, not an official MAIT service. It is 
 ## What’s included
 
 - Responsive institute overview with MAIT's official logo and campus photography.
+- Readable typography and a light/dark appearance toggle that is saved in the browser.
 - Verified profile highlights: established in 1999, 13 engineering disciplines, and 10 campus blocks, as described in MAIT's institute profile.
 - Notice feed sourced from MAIT’s public website, with links to the original notices and dates only when published.
 - Institute, career-development, academic-calendar, contact, and legal links.
