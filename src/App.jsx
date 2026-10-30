@@ -36,6 +36,7 @@ function ThemeToggle({ theme, onToggle }) {
       onClick={onToggle}
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
       title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      aria-pressed={theme === "dark"}
     >
       <span className="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
       <span className="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
@@ -219,13 +220,13 @@ function CampusHighlights() {
         </div>
         <div className="placement-metrics">
           <a className="placement-metric featured" href="https://mait.ac.in/index.php/placements/placement-details.html" target="_blank" rel="noreferrer">
-            <strong>Placement<br />records</strong><span>Explore published<br />year-wise information <b aria-hidden="true">↗</b></span>
+            <span className="placement-index">01 / OUTCOMES</span><strong>Placement records</strong><span>Published year-wise reports <b aria-hidden="true">↗</b></span>
           </a>
           <a className="placement-metric" href="https://mait.ac.in/index.php/placements/campus-placement-support.html" target="_blank" rel="noreferrer">
-            <strong>Career</strong><span>Development Cell<br />and campus support <b aria-hidden="true">↗</b></span>
+            <span className="placement-index">02 / CAREER SUPPORT</span><strong>Career development</strong><span>Placement Cell and campus support <b aria-hidden="true">↗</b></span>
           </a>
           <a className="placement-metric" href="https://mait.ac.in/index.php/placements/industry-institute-interaction-cell-committee.html" target="_blank" rel="noreferrer">
-            <strong>Industry</strong><span>Institute interaction<br />and collaboration <b aria-hidden="true">↗</b></span>
+            <span className="placement-index">03 / PARTNERSHIPS</span><strong>Industry interaction</strong><span>Institute initiatives and collaboration <b aria-hidden="true">↗</b></span>
           </a>
           <p>All placement information is attributed to MAIT. Please verify figures and dates in the official reports.</p>
         </div>
@@ -275,9 +276,9 @@ function CampusFacts() {
 
 function CampusGallery() {
   const photos = [
-    { src: "/images/mait-campus-courtyard-small.jpg", alt: "Academic block at the MAIT campus", className: "" },
-    { src: "/images/mait-campus-event-small.jpg", alt: "A photograph featured on the official MAIT website", className: "" },
-    { src: "/images/mait-campus-community.jpg", alt: "A campus photograph featured on the official MAIT website", className: "" },
+    { src: "/images/mait-campus-courtyard-small.jpg", alt: "MAIT academic buildings and central courtyard", caption: "CAMPUS · ROHINI" },
+    { src: "/images/mait-campus-people.jpg", alt: "Group photo featured on MAIT’s official website", caption: "OFFICIAL MAIT PHOTO" },
+    { src: "/images/mait-campus-event.jpg", alt: "Event with the Hon’ble Vice President of India at Vigyan Bhavan, featured on MAIT’s official website", caption: "OFFICIAL EVENT · VIGYAN BHAVAN" },
   ];
 
   return (
@@ -286,20 +287,31 @@ function CampusGallery() {
         <div>
           <span className="eyebrow">CAMPUS &amp; COMMUNITY</span>
           <h2 id="campus-gallery-title">A place to learn and grow</h2>
-          <p>Official photographs from MAIT’s published website.</p>
+          <p>Campus, community and institute moments from MAIT’s official website.</p>
         </div>
-        <OfficialLink href={OFFICIAL_HOME_URL}>Visit MAIT’s official website</OfficialLink>
+        <OfficialLink href="https://www.google.com/maps/search/?api=1&query=Maharaja+Agrasen+Institute+of+Technology+Rohini+Delhi">
+          Explore MAIT on the map
+        </OfficialLink>
       </div>
       <div className="campus-gallery">
         {photos.map((photo) => (
           <figure className={`campus-photo ${photo.className}`} key={photo.src}>
             <img src={photo.src} alt={photo.alt} loading="lazy" />
             <figcaption>
-              <span>OFFICIAL MAIT PHOTOGRAPH</span>
+              <span>{photo.caption}</span>
               <a href={OFFICIAL_HOME_URL} target="_blank" rel="noreferrer">Official website ↗</a>
             </figcaption>
           </figure>
         ))}
+        <figure className="campus-photo campus-map-card">
+          <iframe
+            src="https://maps.google.com/maps?q=Maharaja%20Agrasen%20Institute%20of%20Technology%2C%20Rohini%2C%20Delhi&t=k&z=17&output=embed"
+            title="Satellite map of Maharaja Agrasen Institute of Technology in Rohini"
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+          <figcaption><span>SATELLITE CAMPUS VIEW</span><a href="https://www.google.com/maps/search/?api=1&query=Maharaja+Agrasen+Institute+of+Technology+Rohini+Delhi" target="_blank" rel="noreferrer">Open map ↗</a></figcaption>
+        </figure>
       </div>
     </section>
   );
