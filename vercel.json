@@ -5,6 +5,9 @@
   "functions": {
     "api/notices.js": {
       "maxDuration": 30
+    },
+    "api/college-info.js": {
+      "maxDuration": 30
     }
   }
 }

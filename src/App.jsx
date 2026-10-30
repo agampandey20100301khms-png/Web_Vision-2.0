@@ -3,6 +3,20 @@ import React, { useEffect, useMemo, useState } from "react";
 const OFFICIAL_NOTICES_URL = "https://mait.ac.in/index.php?option=com_sppagebuilder&view=page&id=6";
 const OFFICIAL_HOME_URL = "https://www.mait.ac.in/";
 const categories = ["All notices", "Academics", "Examinations", "Admissions", "Campus"];
+const engineeringProgrammes = [
+  "Computer Science and Engineering",
+  "Computer Science and Engineering (Artificial Intelligence)",
+  "Computer Science and Engineering (Artificial Intelligence and Machine Learning)",
+  "Computer Science and Engineering (Data Science)",
+  "Computer Science and Technology",
+  "Electronics and Communication Engineering",
+  "Electronics and Communication (Advanced Communication Technology)",
+  "Electronics Engineering (VLSI Design and Technology)",
+  "Electrical and Electronics Engineering",
+  "Information Technology",
+  "Mechanical Engineering",
+];
+const officialAdmissionUrl = "https://www.mait.ac.in/index.php/component/content/article/admissions-2026-27.html?catid=9&Itemid=384";
 const demoAccount = {
   studentId: "LAVISH-CSE-04",
   password: "maitdemo2026",
@@ -106,47 +120,53 @@ function NoticeSummary({ notices, dashboard = false }) {
   );
 }
 
-function NoticeAssistant({ notices, loading, student }) {
+function NoticeAssistant({ notices, student }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
-  const [results, setResults] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [warning, setWarning] = useState("");
+  const [engine, setEngine] = useState("");
+  const [answerLoading, setAnswerLoading] = useState(false);
 
-  function askAssistant(event) {
+  async function askAssistant(event) {
     event.preventDefault();
-    const prompt = question.trim().toLowerCase();
-    if (!prompt) return;
-    const asksSummary = /\b(summary|summarize|overview|all notices|latest|updates)\b/.test(prompt);
+    const prompt = question.trim();
+    if (!prompt || answerLoading) return;
     const availableNotices = notices.filter((notice) => {
       if (student && notice.programs?.length && !notice.programs.includes(student.program)) return false;
       if (student && notice.branches?.length && !notice.branches.includes(student.branchCode) && !notice.branches.includes(student.branch)) return false;
       if (student && notice.semesters?.length && !notice.semesters.includes(Number(student.semester))) return false;
       return true;
     });
-    const matches = availableNotices.filter((notice) => {
-      const searchable = `${notice.title} ${notice.category}`.toLowerCase();
-      if (/\b(exam|examination|timetable|date sheet|result)\b/.test(prompt)) return notice.category === "Examinations";
-      if (/\b(admission|admissions|counselling|counseling)\b/.test(prompt)) return notice.category === "Admissions";
-      if (/\b(academic|class|semester|registration)\b/.test(prompt)) return notice.category === "Academics";
-      if (/\b(campus|event|seminar)\b/.test(prompt)) return notice.category === "Campus";
-      return asksSummary || prompt.split(/\s+/).some((term) => term.length > 2 && searchable.includes(term));
-    }).slice(0, 4);
-    const datedCount = availableNotices.filter((notice) => notice.date).length;
-    const summaryText = student
-      ? `${availableNotices.length} notices are relevant to your course`
-      : `${availableNotices.length} current notices are available`;
-    setResults(matches);
-    setAnswer(loading
-      ? "The official notice feed is still loading. Please try again in a moment."
-      : matches.length && asksSummary
-        ? `${summaryText}${datedCount ? `; ${datedCount} ${datedCount === 1 ? "has" : "have"} a published date` : ""}. Here are the first matching items.`
-        : matches.length
-          ? `I found ${matches.length} relevant ${matches.length === 1 ? "notice" : "notices"}. Dates are shown only when published by MAIT.`
-        : notices.length
-          ? "I couldn’t find a match in the current MAIT feed. Try exams, admissions, academics, or campus."
-          : "I can’t access the MAIT notice feed right now. Please check the official notice board.");
-    setQuestion("");
-    setOpen(true);
+    setAnswerLoading(true);
+    setWarning("");
+    setSources([]);
+    setEngine("");
+    try {
+      const response = await fetch("/api/college-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: prompt,
+          notices: availableNotices.slice(0, 30),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The MAIT information assistant is unavailable.");
+      setAnswer(result.answer);
+      setSources(result.sources || []);
+      setWarning(result.warning || (result.sourceErrors?.length
+        ? `${result.sourceErrors.length} official source page(s) could not be refreshed.`
+        : ""));
+      setEngine(result.engine || "");
+      setQuestion("");
+    } catch (error) {
+      setAnswer("");
+      setWarning(error.message || "Unable to search the current MAIT information.");
+    } finally {
+      setAnswerLoading(false);
+    }
   }
 
   return (
@@ -155,23 +175,22 @@ function NoticeAssistant({ notices, loading, student }) {
         <section className="assistant-panel" aria-label="MAIT notice assistant">
           <div className="assistant-heading">
             <span className="assistant-avatar" aria-hidden="true">✦</span>
-            <div><strong>{student ? "Your MAIT notice assistant" : "MAIT notice assistant"} </strong><small>Answers from the current public feed</small></div>
+            <div><strong>{student ? "Your MAIT guide" : "MAIT college guide"}</strong><small>{engine || "Official-source RAG"}</small></div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Close notice assistant">×</button>
           </div>
-          <p className="assistant-intro">Ask about exams, admissions, academics or campus notices. I only summarize notices loaded from MAIT.</p>
+          <p className="assistant-intro">Ask about admissions, fees, courses, scholarships, accreditation, placements or notices. Answers are grounded in MAIT’s published pages.</p>
           {answer && <p className="assistant-answer" role="status">{answer}</p>}
-          {results.map((notice) => (
-            <a className="assistant-result" href={notice.url} target="_blank" rel="noreferrer" key={notice.id}>
-              <span>
-                {notice.category}{notice.date ? ` · ${formatDate(notice.date)}` : " · Date not listed"}
-                {notice.documentDates?.length ? ` · PDF dates: ${notice.documentDates.slice(0, 2).map((date) => formatDate(date, { day: "numeric", month: "short" })).join(", ")}` : ""}
-              </span>
-              <strong>{notice.title}</strong>
+          {answerLoading && <p className="assistant-answer" role="status">Searching current official sources and preparing a grounded answer…</p>}
+          {warning && <p className="assistant-warning" role="status">{warning}</p>}
+          {sources.map((source) => (
+            <a className="assistant-result" href={source.url} target="_blank" rel="noreferrer" key={`${source.id}-${source.url}`}>
+              <span>{source.title} · Source checked {formatDate(source.checkedAt.slice(0, 10))}</span>
+              <strong>{source.excerpt}</strong>
             </a>
           ))}
           <form onSubmit={askAssistant} className="assistant-form">
-            <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about notices…" aria-label="Ask about MAIT notices" />
-            <button type="submit" aria-label="Send question">↑</button>
+            <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about admissions, fees…" aria-label="Ask the MAIT college guide" maxLength={1000} />
+            <button type="submit" aria-label="Send question" disabled={answerLoading || !question.trim()}>↑</button>
           </form>
         </section>
       )}
@@ -182,7 +201,135 @@ function NoticeAssistant({ notices, loading, student }) {
   );
 }
 
-function CampusHighlights() {
+function NewStudentGuide({ collegeInfo, collegeInfoLoading, collegeInfoError }) {
+  const programmeSource = collegeInfo?.sources?.find((source) => source.id === "programmes");
+  const checkedAt = (sourceId) => {
+    const date = collegeInfo?.sources?.find((source) => source.id === sourceId)?.checkedAt;
+    return date ? `Official page checked ${formatDate(date.slice(0, 10))}` : "";
+  };
+  const fees = collegeInfo?.feeStructure;
+
+  return (
+    <>
+      <section className="prospective-section programmes-section" id="programmes">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">ACADEMIC PROGRAMMES</span>
+            <h2>Find your field of study</h2>
+            <p>B.Tech specialisations published by MAIT, plus undergraduate and postgraduate management programmes.</p>
+          </div>
+          <OfficialLink href="https://www.mait.ac.in/index.php/portfolio/course-of-study.html">Official course list</OfficialLink>
+        </div>
+        <div className="programme-content">
+          <div className="programme-discipline">
+            <span className="programme-label">B.TECH · ENGINEERING</span>
+            <ul className="programme-list">
+              {engineeringProgrammes.map((programme) => <li key={programme}>{programme}</li>)}
+            </ul>
+          </div>
+          <div className="programme-discipline">
+            <span className="programme-label">MANAGEMENT</span>
+            <ul className="programme-list programme-list-short">
+              <li>Bachelor of Business Administration (BBA)</li>
+              <li>Master of Business Administration (MBA)</li>
+              <li>BBA–MBA integrated programme</li>
+            </ul>
+            <p className="programme-update">{programmeSource ? checkedAt("programmes") : "For current programme availability and eligibility, check MAIT and GGSIPU."}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="prospective-section admission-section" id="admissions">
+        <div className="admission-copy">
+          <span className="eyebrow">PROSPECTIVE STUDENTS · 2026–27</span>
+          <h2>Admissions are guided by GGSIPU.</h2>
+          <p>MAIT states that it follows GGSIPU rules for admissions, fees, reservation and document policies. Use the university’s current counselling notices for deadlines and eligibility; admission rounds can change.</p>
+          <p className="live-source-note">{checkedAt("admissions") || "Check the live official admission page for the latest notices."}</p>
+        </div>
+        <div className="admission-actions">
+          <OfficialLink href={officialAdmissionUrl}>MAIT admissions 2026–27</OfficialLink>
+          <OfficialLink href="https://ipu.ac.in/adm2026/adm2026main.php">GGSIPU admission portal</OfficialLink>
+          <OfficialLink href="https://ipu.admissions.nic.in/">Online counselling &amp; application portal</OfficialLink>
+          <OfficialLink href="https://ipu.ac.in/adm2026/adm2026br/br280126ug.pdf">UG admission brochure (GGSIPU)</OfficialLink>
+          <OfficialLink href="https://ipu.ac.in/adm2026/adm2026br/br280126pg.pdf">PG admission brochure (GGSIPU)</OfficialLink>
+        </div>
+      </section>
+
+      <section className="prospective-section fees-section" id="fees">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">PUBLISHED COSTS · ACADEMIC YEAR {fees?.academicYear || "2026–27"}</span>
+            <h2>Plan your costs with the official schedule</h2>
+            <p>Only the cohorts and charges currently published by MAIT are shown. The university controls admission and other fee policies; confirm the amount for your year before paying.</p>
+          </div>
+          <OfficialLink href="https://www.mait.ac.in/index.php/portfolio/fees.html">Official fee structure</OfficialLink>
+        </div>
+        {collegeInfoLoading && <p className="data-status" role="status">Checking MAIT’s current fee page…</p>}
+        {collegeInfoError && <p className="data-error" role="alert">Current fee information could not be refreshed: {collegeInfoError} <a href="https://www.mait.ac.in/index.php/portfolio/fees.html" target="_blank" rel="noreferrer">Open the official fee page ↗</a></p>}
+        {!collegeInfoLoading && !collegeInfoError && (!fees?.rows?.length) && <p className="data-error" role="status">MAIT’s fee table was not available in a readable format. Use the official source link to confirm current fees.</p>}
+        {fees?.rows?.length > 0 && (
+          <div className="fee-table-wrap">
+            <table className="fee-table">
+              <caption>{fees.academicYear ? `MAIT published fees for ${fees.academicYear}` : "MAIT published fees"}{fees.semesterNote ? ` · ${fees.semesterNote}` : ""}</caption>
+              <thead><tr><th scope="col">Programme / admission year</th><th scope="col">Year</th><th scope="col">Published total</th></tr></thead>
+              <tbody>{fees.rows.map((row) => <tr key={`${row.program}-${row.year}`}><th scope="row">{row.program}</th><td>{row.year}</td><td>₹{row.amount}</td></tr>)}</tbody>
+            </table>
+          </div>
+        )}
+        {fees?.hostels?.length > 0 && (
+          <div className="hostel-costs">
+            {fees.hostels.map((hostel) => (
+              <div className="hostel-cost-card" key={hostel.roomType}>
+                <div><h3>{hostel.roomType} hostel</h3><span>{hostel.validity}</span></div>
+                <table className="fee-table hostel-table">
+                  <thead><tr><th scope="col">Charge</th><th scope="col">Single</th><th scope="col">Double</th></tr></thead>
+                  <tbody>{hostel.rows.map((row) => <tr key={row.charge}><th scope="row">{row.charge}</th><td>₹{row.single}</td><td>₹{row.double}</td></tr>)}</tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="fee-disclaimer">Hostel amounts are shown with MAIT’s published validity period. Fee amounts, applicable cohorts and payment instructions can change; verify against the official page before making a decision or payment.</p>
+      </section>
+
+      <section className="prospective-section accreditation-section" id="accreditation">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">RECOGNITION &amp; QUALITY ASSURANCE</span>
+            <h2>Verify programme-level records</h2>
+            <p>MAIT publishes year-specific NBA records and AICTE approval documents. Accreditation status applies to named programmes and periods; check the underlying record rather than assuming it covers every course.</p>
+          </div>
+        </div>
+        <div className="accreditation-cards">
+          <article className="accreditation-card">
+            <span className="programme-label">NBA · PROGRAMME ACCREDITATION</span>
+            <h3>Records by academic year</h3>
+            <p>Open MAIT’s published record for the relevant programme and period.</p>
+            <div className="accreditation-links">
+              {collegeInfo?.accreditationRecords?.length
+                ? collegeInfo.accreditationRecords.map((record) => <OfficialLink href={record.url} key={record.url}>{record.label}</OfficialLink>)
+                : <OfficialLink href="https://mait.ac.in/index.php/component/content/article/present-accreditation-status-with-nba.html?catid=9&Itemid=384">Browse official NBA records</OfficialLink>}
+            </div>
+          </article>
+          <article className="accreditation-card">
+            <span className="programme-label">AICTE · APPROVAL DOCUMENTS</span>
+            <h3>Approval status</h3>
+            <p>The MAIT approvals page lists the 2026–27 Extension of Approval (EOA) document and previous years.</p>
+            <OfficialLink href="https://mait.ac.in/index.php/component/content/article/aicte-feedback-approvals.html?catid=9&Itemid=384">AICTE approvals at MAIT</OfficialLink>
+          </article>
+          <article className="accreditation-card">
+            <span className="programme-label">UNIVERSITY AFFILIATION</span>
+            <h3>GGSIPU</h3>
+            <p>MAIT’s admissions page identifies the institute as affiliated to Guru Gobind Singh Indraprastha University.</p>
+            <OfficialLink href={officialAdmissionUrl}>MAIT admission and affiliation information</OfficialLink>
+          </article>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function CampusHighlights({ collegeInfo, collegeInfoLoading, collegeInfoError }) {
   return (
     <>
       <section className="institution-section" id="about">
@@ -204,6 +351,8 @@ function CampusHighlights() {
           <OfficialLink href="https://mait.ac.in/index.php/contact-us.html">Campus address &amp; directions</OfficialLink>
         </div>
       </section>
+
+      <NewStudentGuide collegeInfo={collegeInfo} collegeInfoLoading={collegeInfoLoading} collegeInfoError={collegeInfoError} />
 
       <section className="placement-section" id="placements">
         <div className="placement-copy">
@@ -513,7 +662,7 @@ function LoginCard({ onLogin }) {
   );
 }
 
-function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noticeError, archive, setArchive }) {
+function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noticeError, archive, setArchive, collegeInfo, collegeInfoLoading, collegeInfoError }) {
   const archiveMonths = useMemo(() => {
     const counts = new Map();
     notices.forEach((notice) => {
@@ -536,11 +685,12 @@ function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noti
       <header className="site-header">
         <Brand onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         <nav className="main-nav" aria-label="Main navigation">
-          <a href={OFFICIAL_NOTICES_URL} target="_blank" rel="noreferrer">Official notices ↗</a>
-          <a href="#archives">Archives</a>
-          <a href="#about">Discover MAIT</a>
+          <a href="#programmes">Programmes</a>
+          <a href="#admissions">Admissions</a>
+          <a href="#fees">Fees</a>
+          <a href="#accreditation">Accreditation</a>
           <a href="#placements">Careers</a>
-          <a href="#resources">Information</a>
+          <a href="#notices">Notices</a>
         </nav>
         <ThemeToggle theme={theme} onToggle={onThemeToggle} />
         <button className="header-login" type="button" onClick={onStudentLogin}>Student portal <span aria-hidden="true">↗</span></button>
@@ -598,9 +748,9 @@ function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noti
             </p>
           </aside>
         </section>
-        <CampusHighlights />
+        <CampusHighlights collegeInfo={collegeInfo} collegeInfoLoading={collegeInfoLoading} collegeInfoError={collegeInfoError} />
       </main>
-      <NoticeAssistant notices={notices} loading={loading} />
+      <NoticeAssistant notices={notices} />
       <SiteFooter />
     </div>
   );
@@ -625,7 +775,7 @@ function StudentPortalPage({ theme, onThemeToggle, onLogin, onBack, notices, loa
         </section>
         <LoginCard onLogin={onLogin} />
       </main>
-      <NoticeAssistant notices={notices} loading={loading} />
+      <NoticeAssistant notices={notices} />
       <SiteFooter />
     </div>
   );
@@ -703,7 +853,7 @@ function Dashboard({ theme, onThemeToggle, student, notices, loading, noticeErro
           <NoticeBoard dashboard student={student} notices={notices} loading={loading} noticeError={noticeError} />
         </section>
       </main>
-      <NoticeAssistant notices={notices} loading={loading} student={student} />
+      <NoticeAssistant notices={notices} student={student} />
       <SiteFooter />
     </div>
   );
@@ -753,6 +903,9 @@ export default function App() {
   const [noticeError, setNoticeError] = useState("");
   const [loading, setLoading] = useState(true);
   const [archive, setArchive] = useState("all");
+  const [collegeInfo, setCollegeInfo] = useState(null);
+  const [collegeInfoError, setCollegeInfoError] = useState("");
+  const [collegeInfoLoading, setCollegeInfoLoading] = useState(true);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -768,6 +921,23 @@ export default function App() {
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/college-info", { signal: controller.signal })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || "Current official college information is unavailable.");
+        setCollegeInfo(result);
+      })
+      .catch((error) => {
+        if (error.name !== "AbortError") setCollegeInfoError(error.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCollegeInfoLoading(false);
       });
     return () => controller.abort();
   }, []);
@@ -802,5 +972,5 @@ export default function App() {
 
   return studentPortalOpen
     ? <StudentPortalPage theme={theme} onThemeToggle={toggleTheme} onLogin={handleLogin} onBack={() => setStudentPortalOpen(false)} notices={notices} loading={loading} />
-    : <HomePage theme={theme} onThemeToggle={toggleTheme} onStudentLogin={() => { setStudentPortalOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} notices={notices} loading={loading} noticeError={noticeError} archive={archive} setArchive={setArchive} />;
+    : <HomePage theme={theme} onThemeToggle={toggleTheme} onStudentLogin={() => { setStudentPortalOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} notices={notices} loading={loading} noticeError={noticeError} archive={archive} setArchive={setArchive} collegeInfo={collegeInfo} collegeInfoLoading={collegeInfoLoading} collegeInfoError={collegeInfoError} />;
 }

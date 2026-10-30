@@ -10,7 +10,8 @@ This is an independent educational project, not an official MAIT service. It is 
 - Readable typography and a light/dark appearance toggle that is saved in the browser.
 - Verified profile highlights: established in 1999, 13 engineering disciplines, and 10 campus blocks, as described in MAIT's institute profile.
 - Notice feed sourced from MAIT’s public website, with source links, published dates, and clearly separated dates extracted from attached PDFs.
-- A course-aware notice briefing and lightweight assistant that searches only the public MAIT notices currently loaded in the page.
+- Prospective-student guide with the current MAIT-published fee and hostel tables, 2026–27 admission links, published engineering programmes, NBA record links, and AICTE approval documents. Fee and source metadata are refreshed from MAIT’s public pages.
+- A source-grounded retrieval assistant for admissions, fees, programmes, scholarships, accreditation, placements, and the current course-filtered notice feed. Answers link to the MAIT pages used.
 - Institute, career-development, academic-calendar, contact, and legal links.
 - Separate student portal and course-scoped demo dashboard for Lavish Hurria, with sample attendance, marks, and notices.
 - A locally bundled illustrative stock portrait; it is not verified to depict the demo student.
@@ -26,6 +27,14 @@ The dev server uses `127.0.0.1:5173` with a strict port. Open <http://127.0.0.1:
 
 The logo and campus images are served from `public/images`. Only live notices and links to official MAIT pages require an internet connection.
 
+The college information endpoint fetches a fixed list of public MAIT pages and refreshes its in-process cache every ten minutes. If a source cannot be reached or its fee table cannot be parsed, the page reports that state and links to the official source instead of presenting estimated values.
+
+## Local Qwen assistant
+
+The development API uses Ollama on `127.0.0.1:11434` for local Qwen generation, grounded in retrieved excerpts from official MAIT pages. The default model is `qwen3.5:4b`; set `MAIT_OLLAMA_MODEL` to use another model already installed in Ollama. On a new machine, install Ollama and pull the chosen model, then keep the Ollama service running while using the assistant. If Ollama is unavailable, the assistant reports that and shows matching official excerpts.
+
+The Vercel deployment does not connect to a developer’s machine or expose an Ollama endpoint. Online answers use source-linked retrieval from the same official pages; model generation remains local-only unless a separately hosted, secured inference service is deliberately configured.
+
 ## Demo access
 
 - **Student ID:** `LAVISH-CSE-04`
@@ -37,6 +46,14 @@ This is a front-end-only demonstration login. Attendance and marks are sample va
 
 - [MAIT homepage and public notices](https://www.mait.ac.in/)
 - [About MAIT](https://mait.ac.in/index.php/abouts/about-us.html)
+- [MAIT fees and hostel charges](https://www.mait.ac.in/index.php/portfolio/fees.html)
+- [MAIT admissions 2026–27](https://www.mait.ac.in/index.php/component/content/article/admissions-2026-27.html?catid=9&Itemid=384)
+- [GGSIPU admissions 2026](https://ipu.ac.in/adm2026/adm2026main.php)
+- [Programmes and courses of study](https://mait.ac.in/index.php/portfolio/course-of-study.html)
+- [Academic calendar](https://mait.ac.in/index.php/portfolio/academic-calendar.html)
+- [NBA accreditation records](https://mait.ac.in/index.php/component/content/article/present-accreditation-status-with-nba.html?catid=9&Itemid=384)
+- [AICTE approval documents](https://mait.ac.in/index.php/component/content/article/aicte-feedback-approvals.html?catid=9&Itemid=384)
+- [Scholarships](https://mait.ac.in/index.php/portfolio/scholarships.html)
 - [Vision, mission, and values](https://mait.ac.in/index.php/abouts/vision.html)
 - [Placement details](https://mait.ac.in/index.php/placements/placement-details.html)
 - [Career development and campus placement support](https://mait.ac.in/index.php/placements/campus-placement-support.html)
