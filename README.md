@@ -9,7 +9,8 @@ This is an independent educational project, not an official MAIT service. It is 
 - Responsive institute overview with MAIT's official logo and locally bundled campus photography, so images do not depend on third-party image hosts.
 - Readable typography and a light/dark appearance toggle that is saved in the browser.
 - Verified profile highlights: established in 1999, 13 engineering disciplines, and 10 campus blocks, as described in MAIT's institute profile.
-- Notice feed sourced from MAIT’s public website, with links to the original notices and dates only when published.
+- Notice feed sourced from MAIT’s public website, with source links, published dates, and clearly separated dates extracted from attached PDFs.
+- A course-aware notice briefing and lightweight assistant that searches only the public MAIT notices currently loaded in the page.
 - Institute, career-development, academic-calendar, contact, and legal links.
 - Separate student portal and course-scoped demo dashboard for Lavish Hurria, with sample attendance, marks, and notices.
 - A locally bundled illustrative stock portrait; it is not verified to depict the demo student.

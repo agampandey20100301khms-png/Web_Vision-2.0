@@ -29,20 +29,16 @@ function Brand({ onClick }) {
 }
 
 function ThemeToggle({ theme, onToggle }) {
-  const nextTheme = theme === "light" ? "dark" : "light";
   return (
     <button
       className="theme-toggle"
       type="button"
       onClick={onToggle}
-      aria-label={`Switch to ${nextTheme} mode`}
-      aria-checked={theme === "dark"}
-      role="switch"
+      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
     >
-      <span className="theme-label">{theme === "light" ? "Light" : "Dark"}</span>
-      <span className="theme-switch-track" aria-hidden="true">
-        <span className="theme-switch-thumb">{theme === "light" ? "☀" : "☾"}</span>
-      </span>
+      <span className="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
+      <span className="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
     </button>
   );
 }
@@ -66,7 +62,11 @@ function NoticeCard({ notice, compact = false }) {
           <span className="notice-audience">Official MAIT notice</span>
         </div>
         <h3>{notice.title}</h3>
-        <p>Open the original notice for full details and attachments.</p>
+        <p>
+          {notice.documentDates?.length
+            ? `Dates listed in the attached PDF: ${notice.documentDates.slice(0, 5).map((date) => formatDate(date, { day: "numeric", month: "short" })).join(", ")}${notice.documentDates.length > 5 ? ` +${notice.documentDates.length - 5} more` : ""}.`
+            : "Open the original notice for full details and attachments."}
+        </p>
       </div>
       <span className="notice-arrow" aria-hidden="true">↗</span>
     </a>
@@ -78,6 +78,106 @@ function OfficialLink({ href, children }) {
     <a className="external-link" href={href} target="_blank" rel="noreferrer">
       {children} <span aria-hidden="true">↗</span>
     </a>
+  );
+}
+
+function NoticeSummary({ notices, dashboard = false }) {
+  const categoriesSummary = ["Examinations", "Admissions", "Academics", "Campus"]
+    .map((category) => ({ category, count: notices.filter((notice) => notice.category === category).length }))
+    .filter((entry) => entry.count);
+  const datedCount = notices.filter((notice) => notice.date).length;
+
+  if (!notices.length) return null;
+
+  return (
+    <aside className="notice-summary" aria-label="Notice summary">
+      <span className="summary-icon" aria-hidden="true">✦</span>
+      <div className="summary-copy">
+        <strong>{dashboard ? "Your notice briefing" : "Campus briefing"}</strong>
+        <p>
+          {notices.length} {notices.length === 1 ? "update" : "updates"}{categoriesSummary.length
+            ? ` across ${categoriesSummary.map(({ category }) => category.toLowerCase()).join(", ")}`
+            : ""}. {datedCount} {datedCount === 1 ? "has" : "have"} a published date. Open each source for full details.
+        </p>
+      </div>
+      <span className="summary-count">{notices.length}<small> UPDATES</small></span>
+    </aside>
+  );
+}
+
+function NoticeAssistant({ notices, loading, student }) {
+  const [open, setOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [results, setResults] = useState([]);
+
+  function askAssistant(event) {
+    event.preventDefault();
+    const prompt = question.trim().toLowerCase();
+    if (!prompt) return;
+    const asksSummary = /\b(summary|summarize|overview|all notices|latest|updates)\b/.test(prompt);
+    const availableNotices = notices.filter((notice) => {
+      if (student && notice.programs?.length && !notice.programs.includes(student.program)) return false;
+      if (student && notice.branches?.length && !notice.branches.includes(student.branchCode) && !notice.branches.includes(student.branch)) return false;
+      if (student && notice.semesters?.length && !notice.semesters.includes(Number(student.semester))) return false;
+      return true;
+    });
+    const matches = availableNotices.filter((notice) => {
+      const searchable = `${notice.title} ${notice.category}`.toLowerCase();
+      if (/\b(exam|examination|timetable|date sheet|result)\b/.test(prompt)) return notice.category === "Examinations";
+      if (/\b(admission|admissions|counselling|counseling)\b/.test(prompt)) return notice.category === "Admissions";
+      if (/\b(academic|class|semester|registration)\b/.test(prompt)) return notice.category === "Academics";
+      if (/\b(campus|event|seminar)\b/.test(prompt)) return notice.category === "Campus";
+      return asksSummary || prompt.split(/\s+/).some((term) => term.length > 2 && searchable.includes(term));
+    }).slice(0, 4);
+    const datedCount = availableNotices.filter((notice) => notice.date).length;
+    const summaryText = student
+      ? `${availableNotices.length} notices are relevant to your course`
+      : `${availableNotices.length} current notices are available`;
+    setResults(matches);
+    setAnswer(loading
+      ? "The official notice feed is still loading. Please try again in a moment."
+      : matches.length && asksSummary
+        ? `${summaryText}${datedCount ? `; ${datedCount} ${datedCount === 1 ? "has" : "have"} a published date` : ""}. Here are the first matching items.`
+        : matches.length
+          ? `I found ${matches.length} relevant ${matches.length === 1 ? "notice" : "notices"}. Dates are shown only when published by MAIT.`
+        : notices.length
+          ? "I couldn’t find a match in the current MAIT feed. Try exams, admissions, academics, or campus."
+          : "I can’t access the MAIT notice feed right now. Please check the official notice board.");
+    setQuestion("");
+    setOpen(true);
+  }
+
+  return (
+    <div className="notice-assistant">
+      {open && (
+        <section className="assistant-panel" aria-label="MAIT notice assistant">
+          <div className="assistant-heading">
+            <span className="assistant-avatar" aria-hidden="true">✦</span>
+            <div><strong>{student ? "Your MAIT notice assistant" : "MAIT notice assistant"} </strong><small>Answers from the current public feed</small></div>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close notice assistant">×</button>
+          </div>
+          <p className="assistant-intro">Ask about exams, admissions, academics or campus notices. I only summarize notices loaded from MAIT.</p>
+          {answer && <p className="assistant-answer" role="status">{answer}</p>}
+          {results.map((notice) => (
+            <a className="assistant-result" href={notice.url} target="_blank" rel="noreferrer" key={notice.id}>
+              <span>
+                {notice.category}{notice.date ? ` · ${formatDate(notice.date)}` : " · Date not listed"}
+                {notice.documentDates?.length ? ` · PDF dates: ${notice.documentDates.slice(0, 2).map((date) => formatDate(date, { day: "numeric", month: "short" })).join(", ")}` : ""}
+              </span>
+              <strong>{notice.title}</strong>
+            </a>
+          ))}
+          <form onSubmit={askAssistant} className="assistant-form">
+            <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder="Ask about notices…" aria-label="Ask about MAIT notices" />
+            <button type="submit" aria-label="Send question">↑</button>
+          </form>
+        </section>
+      )}
+      <button className="assistant-launcher" type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+        <span aria-hidden="true">✦</span><span>{open ? "Close" : "Ask MAIT"}</span>
+      </button>
+    </div>
   );
 }
 
@@ -175,7 +275,7 @@ function CampusFacts() {
 
 function CampusGallery() {
   const photos = [
-    { src: "/images/mait-campus-courtyard-small.jpg", alt: "Academic block at the MAIT campus", className: "campus-photo-wide" },
+    { src: "/images/mait-campus-courtyard-small.jpg", alt: "Academic block at the MAIT campus", className: "" },
     { src: "/images/mait-campus-event-small.jpg", alt: "A photograph featured on the official MAIT website", className: "" },
     { src: "/images/mait-campus-community.jpg", alt: "A campus photograph featured on the official MAIT website", className: "" },
   ];
@@ -223,7 +323,7 @@ function NoticeBoard({
   const visibleNotices = useMemo(() => {
     return notices.filter((notice) => {
       const matchesProgram = !student || !notice.programs?.length || notice.programs.includes(student.program);
-      const matchesBranch = !student || !notice.branches?.length || notice.branches.includes(student.branchCode);
+      const matchesBranch = !student || !notice.branches?.length || notice.branches.includes(student.branchCode) || notice.branches.includes(student.branch);
       const matchesSemester = !student || !notice.semesters?.length || notice.semesters.includes(Number(student.semester));
       const matchesCategory = category === "All notices" || notice.category === category;
       const matchesArchive = archive === "all" || (archive === "undated" ? !notice.date : notice.date?.startsWith(archive));
@@ -320,6 +420,7 @@ function NoticeBoard({
         </div>
       )}
       {!loading && !noticeError && <div className="notice-list" aria-live="polite">
+        <NoticeSummary notices={visibleNotices} dashboard={dashboard} />
         {visibleNotices.map((notice) => <NoticeCard key={notice.id} notice={notice} compact={dashboard} />)}
         {visibleNotices.length === 0 && (
           <div className="empty-state">
@@ -487,12 +588,13 @@ function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noti
         </section>
         <CampusHighlights />
       </main>
+      <NoticeAssistant notices={notices} loading={loading} />
       <SiteFooter />
     </div>
   );
 }
 
-function StudentPortalPage({ theme, onThemeToggle, onLogin, onBack }) {
+function StudentPortalPage({ theme, onThemeToggle, onLogin, onBack, notices, loading }) {
   return (
     <div className="portal-site" data-theme={theme}>
       <header className="site-header portal-header">
@@ -511,6 +613,7 @@ function StudentPortalPage({ theme, onThemeToggle, onLogin, onBack }) {
         </section>
         <LoginCard onLogin={onLogin} />
       </main>
+      <NoticeAssistant notices={notices} loading={loading} />
       <SiteFooter />
     </div>
   );
@@ -588,6 +691,7 @@ function Dashboard({ theme, onThemeToggle, student, notices, loading, noticeErro
           <NoticeBoard dashboard student={student} notices={notices} loading={loading} noticeError={noticeError} />
         </section>
       </main>
+      <NoticeAssistant notices={notices} loading={loading} student={student} />
       <SiteFooter />
     </div>
   );
@@ -685,6 +789,6 @@ export default function App() {
   }
 
   return studentPortalOpen
-    ? <StudentPortalPage theme={theme} onThemeToggle={toggleTheme} onLogin={handleLogin} onBack={() => setStudentPortalOpen(false)} />
+    ? <StudentPortalPage theme={theme} onThemeToggle={toggleTheme} onLogin={handleLogin} onBack={() => setStudentPortalOpen(false)} notices={notices} loading={loading} />
     : <HomePage theme={theme} onThemeToggle={toggleTheme} onStudentLogin={() => { setStudentPortalOpen(true); window.scrollTo({ top: 0, behavior: "smooth" }); }} notices={notices} loading={loading} noticeError={noticeError} archive={archive} setArchive={setArchive} />;
 }

@@ -1,7 +1,10 @@
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+
 const OFFICIAL_HOME = "https://www.mait.ac.in/";
 const ALLOWED_HOSTS = new Set(["mait.ac.in", "www.mait.ac.in"]);
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_PARALLEL_ARTICLES = 6;
+const MAX_PDF_BYTES = 4 * 1024 * 1024;
 
 function decodeHtml(value) {
   const named = {
@@ -121,6 +124,110 @@ function parsePublishedDate(html) {
   return null;
 }
 
+function dateFromText(value) {
+  const labeledDate = value.match(/\b(?:dated|date(?:\s+of\s+(?:issue|publication))?|issued\s+on)\s*[:\-]?\s*(\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}\s+[A-Za-z]+\s+\d{4})\b/i)?.[1];
+  if (!labeledDate) return null;
+
+  const numeric = labeledDate.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  const iso = labeledDate.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})$/);
+  let date;
+  if (numeric) {
+    const [, day, month, year] = numeric.map(Number);
+    date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCDate() !== day || date.getUTCMonth() !== month - 1) return null;
+  } else if (iso) {
+    const [, year, month, day] = iso.map(Number);
+    date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCDate() !== day || date.getUTCMonth() !== month - 1) return null;
+  }
+  else {
+    const parsed = new Date(`${labeledDate} UTC`);
+    if (!Number.isNaN(parsed.getTime())) date = parsed;
+  }
+  if (!date || Number.isNaN(date.getTime())) return null;
+  const year = date.getUTCFullYear();
+  if (year < 2000 || year > new Date().getUTCFullYear() + 2) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function extractDocumentDates(value) {
+  const found = new Set();
+  for (const match of value.matchAll(/\b(\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{4}[./-]\d{1,2}[./-]\d{1,2})\b/g)) {
+    const date = dateFromText(`Date: ${match[1]}`);
+    if (date) found.add(date);
+  }
+  return [...found].sort();
+}
+
+function findPdfLink(html, articleUrl) {
+  const articleBody = html.match(/<div\b[^>]*class=["'][^"']*astroid-article-text[^"']*["'][\s\S]*?<\/main>/i)?.[0];
+  if (!articleBody) return null;
+  for (const match of articleBody.matchAll(/<a\b([^>]*)>/gi)) {
+    const rawHref = match[1].match(/\bhref\s*=\s*["']([^"']+)["']/i)?.[1];
+    if (!rawHref) continue;
+    try {
+      const url = new URL(decodeHtml(rawHref), articleUrl);
+      if (ALLOWED_HOSTS.has(url.hostname) && /\.pdf(?:$|[?#])/i.test(url.href)) return url.href;
+    } catch {
+      console.warn(`Ignoring invalid attachment URL on ${articleUrl}.`);
+    }
+  }
+  return null;
+}
+
+async function parsePdfDetails(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/pdf", "User-Agent": "MAIT-Student-Portal/1.0 (official-notice reader)" },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`MAIT returned HTTP ${response.status} for a notice PDF.`);
+    const declaredLength = Number(response.headers.get("content-length"));
+    if (declaredLength > MAX_PDF_BYTES) throw new Error("The notice PDF exceeds the 4 MB extraction limit.");
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("The notice PDF response did not contain a readable file.");
+    const chunks = [];
+    let totalLength = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalLength += value.byteLength;
+      if (totalLength > MAX_PDF_BYTES) {
+        await reader.cancel();
+        throw new Error("The notice PDF exceeds the 4 MB extraction limit.");
+      }
+      chunks.push(value);
+    }
+    const data = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      data.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const loadingTask = getDocument({ data, isEvalSupported: false, useSystemFonts: true });
+    const document = await loadingTask.promise;
+    try {
+      const pageCount = Math.min(document.numPages, 10);
+      const pageTexts = await Promise.all(Array.from({ length: pageCount }, async (_, index) => {
+        const page = await document.getPage(index + 1);
+        const content = await page.getTextContent();
+        return content.items.map((item) => item.str).join(" ");
+      }));
+      const text = pageTexts.join(" ");
+      return {
+        date: dateFromText(text),
+        documentDates: extractDocumentDates(text),
+      };
+    } finally {
+      await loadingTask.destroy();
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function addPublishedDates(notices) {
   const result = notices.slice();
   let nextIndex = 0;
@@ -130,7 +237,19 @@ async function addPublishedDates(notices) {
       const notice = notices[index];
       try {
         const html = await fetchPage(notice.url);
-        result[index] = { ...notice, date: parsePublishedDate(html) };
+        let date = parsePublishedDate(html);
+        let documentDates = [];
+        const pdfUrl = findPdfLink(html, notice.url);
+        if (pdfUrl) {
+          try {
+            const pdfDetails = await parsePdfDetails(pdfUrl);
+            date ??= pdfDetails.date;
+            documentDates = pdfDetails.documentDates;
+          } catch (error) {
+            console.warn(`Could not extract dates from ${pdfUrl}: ${error.message}`);
+          }
+        }
+        result[index] = { ...notice, date, documentDates };
       } catch (error) {
         console.warn(`Could not read the publication date for ${notice.url}: ${error.message}`);
       }
