@@ -1,182 +1,52 @@
-# Web_Vision-2.0
-🎓 MAIT Reimagined – Official Website Redesign
-A Modern, Student-Centric Digital Experience for Maharaja Agrasen Institute of Technology
+# Maharaja Agrasen Institute of Technology — Campus & Academics
 
-<p align="center">
-<b>WebVision 2.0 | Website Redesign Challenge 2026</b>
-<br/>
-Maharaja Agrasen Institute of Technology, Rohini, Delhi
-</p>
+A formal, public-facing redesign concept for Maharaja Agrasen Institute of Technology (MAIT). The homepage introduces the institute to prospective students, families, alumni, and visitors. Student demo access is available separately from the top-right Student Portal link.
 
-🌐 Project Overview
+This is an independent educational project, not an official MAIT service. It is not affiliated with or endorsed by MAIT, and it does not connect to institute accounts or student records. Institute facts and photographs link to MAIT's official website; figures without a clearly stated reporting period are not presented as current statistics.
 
-MAIT Reimagined is a UI/UX redesign project of the official website of Maharaja Agrasen Institute of Technology (MAIT).
+## What’s included
 
-The project aims to transform the existing college website into a modern, visually appealing, user-friendly and responsive digital platform.
+- Responsive institute overview with MAIT's official logo and campus photography.
+- Verified profile highlights: established in 1999, 13 engineering disciplines, and 10 campus blocks, as described in MAIT's institute profile.
+- Notice feed sourced from MAIT’s public website, with links to the original notices and dates only when published.
+- Institute, career-development, academic-calendar, contact, and legal links.
+- Separate student portal and course-scoped demo dashboard for Lavish Hurria, with sample attendance, marks, and notices.
+- A locally bundled illustrative stock portrait; it is not verified to depict the demo student.
 
-Our vision is to make academic information, college notices, admissions, events, departments and placement updates easier to access through an intuitive and student-first interface.
+## Run locally
 
-Original Website: https://mait.ac.in/
+```bash
+npm install
+npm run dev
+```
 
-🔴 Problem Statement
+The dev server uses `127.0.0.1:5173` with a strict port. Open <http://127.0.0.1:5173/>. Keep the dev process running to retain the local fallback if the hosted site is unavailable. The `/api/notices` endpoint fetches public content from MAIT, so the feed depends on MAIT’s site being reachable.
 
-The official MAIT website serves as an important information platform for students, faculty, parents, alumni and prospective applicants.
+## Demo access
 
-However, navigating an information-rich institutional website can sometimes be challenging.
+- **Student ID:** `LAVISH-CSE-04`
+- **Password:** `maitdemo2026`
 
-Our redesign focuses on addressing the following UX challenges:
+This is a front-end-only demonstration login. Attendance and marks are sample values and are not official academic records. Do not enter real student credentials.
 
-Information Overload: Multiple notices, announcements and updates can make important information difficult to identify.
-Navigation Complexity: Users may need to explore several sections to locate specific academic or institutional information.
-Notice Accessibility: Finding relevant notices and circulars can be improved through better categorization and search functionality.
-User Experience: Different visitors have different requirements, but they share the same institutional platform.
-Visual Hierarchy: Important information deserves clearer prioritization and presentation.
-Mobile Responsiveness: Academic information and college services should remain easy to access across devices.
-Our Design Challenge
+## Official sources
 
-How might we redesign the MAIT website to create a seamless digital experience that makes information discovery faster, navigation simpler and the overall interface more engaging?
+- [MAIT homepage and public notices](https://www.mait.ac.in/)
+- [About MAIT](https://mait.ac.in/index.php/abouts/about-us.html)
+- [Vision, mission, and values](https://mait.ac.in/index.php/abouts/vision.html)
+- [Placement details](https://mait.ac.in/index.php/placements/placement-details.html)
+- [Career development and campus placement support](https://mait.ac.in/index.php/placements/campus-placement-support.html)
+- [Contact MAIT](https://mait.ac.in/index.php/contact-us.html)
+- [MAIT privacy policy](https://mait.ac.in/index.php/component/content/article/privacy-policy.html?catid=10&Itemid=384)
+- [MAIT terms of use](https://mait.ac.in/index.php/component/content/article/terms-of-use.html?catid=10&Itemid=384)
 
-💡 Our Solution
+The institute and placement pages may be updated by MAIT. Verify current details and the reporting period at the linked official sources. Undated notices are not assigned invented dates. The student portal is a UI demonstration and must not be used with real student credentials.
 
-We propose a modern and student-focused website that combines clean aesthetics, intuitive navigation and improved information architecture.
+## Build and deployment
 
-Our redesign prioritizes usability over unnecessary visual complexity.
+```bash
+npm run build
+npx vercel --prod
+```
 
-✨ Key Features
-Feature	Improvement
-Modern Homepage	Clean layout with organized information
-Smart Notice Board	Searchable and categorized notices
-Admissions Section	Simplified access to admission information
-Department Explorer	Organized academic departments
-Events & Activities	Interactive event discovery
-Placement Highlights	Engaging placement and achievement sections
-Student Quick Links	Easy access to important academic resources
-Responsive Design	Optimized desktop and mobile experience
-Accessibility	Improved typography, contrast and readability
-🎯 Target Users
-Current Students: Notices, examinations, academic schedules and events.
-Prospective Students: Courses, admissions, eligibility and campus information.
-Faculty Members: Department information and institutional announcements.
-Parents: Academic information, placements and college achievements.
-Visitors & Alumni: Events, institute information and updates.
-🖥️ Pages Redesigned
-Home
-About MAIT
-Admissions
-Academics
-Departments
-Notices & Circulars
-Events & Activities
-Placements & Achievements
-Contact Us
-🎨 Design Philosophy
-
-Our design follows five core principles:
-
-Simplicity: Remove unnecessary complexity.
-Accessibility: Make information easy to read and understand.
-Consistency: Maintain a unified design language.
-Responsiveness: Deliver a seamless experience across devices.
-User-Centricity: Design around real student and visitor needs.
-🔄 Design Process
-Research: Study the existing MAIT website and identify usability opportunities.
-Analysis: Understand user needs and pain points.
-Ideation: Develop innovative solutions and improved user journeys.
-Wireframing: Create structured page layouts.
-UI Design: Develop high-fidelity interfaces.
-Development: Implement the redesigned website.
-Testing: Evaluate usability and responsiveness.
-🛠️ Technology Stack
-
-Update this according to the technologies used in your project.
-
-UI/UX Design: Figma
-Frontend: React.js
-Styling: Tailwind CSS
-Programming Language: JavaScript
-Version Control: Git & GitHub
-Deployment: Vercel / Netlify
-📂 Project Structure
-text
-MAIT-Reimagined/
-│
-├── public/
-│   └── assets/
-│
-├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── assets/
-│   ├── styles/
-│   ├── App.jsx
-│   └── main.jsx
-│
-├── screenshots/
-│
-├── README.md
-└── package.json
-
-📸 Screenshots & Preview
-
-Visual previews of our redesigned website will be added here.
-
-1. Homepage
-
-<!-- Add homepage screenshot here -->
-
-2. Notice Board
-
-<!-- Add notice board screenshot here -->
-
-3. Admissions Page
-
-<!-- Add admissions screenshot here -->
-
-4. Departments Page
-
-<!-- Add departments screenshot here -->
-
-5. Mobile Responsive View
-
-<!-- Add mobile screenshot here -->
-
-🚀 Expected Impact
-Faster access to important academic information.
-Improved navigation and information discovery.
-Better readability and content organization.
-Enhanced experience for prospective students.
-Improved mobile usability.
-A more engaging digital identity for the institute.
-🔮 Future Scope
-Personalized student dashboard.
-AI-powered college information assistant.
-Advanced notice search and filtering.
-Integrated academic calendar.
-Multilingual accessibility.
-Smart notification system.
-👥 Team Members
-Team Member	Contribution
-Member 1	UI/UX Research & Design
-Member 2	Frontend Development
-Member 3	UI Design & Prototyping
-Member 4	Testing & Documentation
-
-Replace placeholders with actual names and responsibilities.
-
-⚠️ Disclaimer
-
-This is an independent student-led website redesign project developed for educational and hackathon purposes as part of WebVision 2.0.
-
-This project is not affiliated with, endorsed by or officially associated with Maharaja Agrasen Institute of Technology.
-
-The redesigned website is a conceptual project and does not replace the official MAIT website.
-
-Official institutional information should always be verified through https://mait.ac.in/.
-
-<p align="center">
-<b>Designed with ❤️ by Team MAIT Reimagined</b>
-<br/>
-<i>Making Campus Information Simpler, Smarter & Accessible.</i>
-<br/><br/>
-WebVision 2.0 | 2026
-</p>
+The project is configured for Vercel, including the `/api/notices` serverless endpoint. The built static site is emitted to `dist/`.
