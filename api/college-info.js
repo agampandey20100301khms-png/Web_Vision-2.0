@@ -79,7 +79,7 @@ function extractFeeStructure(html) {
     return {
       roomType: index === 0 ? "Non-AC" : "AC",
       validity: validity.replace(/^Charges\s*/i, ""),
-      rows: rows.slice(1).filter((row) => row.length >= 3)
+      rows: rows.filter((row) => row.length >= 3 && /^(room charges|mess charges|total pay(?:able|ble))/i.test(row[0].trim()))
         .map(([charge, single, double]) => ({ charge: charge.replace(/payble/i, "payable"), single, double })),
     };
   });
