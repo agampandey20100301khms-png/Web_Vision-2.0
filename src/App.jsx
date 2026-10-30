@@ -36,10 +36,13 @@ function ThemeToggle({ theme, onToggle }) {
       type="button"
       onClick={onToggle}
       aria-label={`Switch to ${nextTheme} mode`}
-      aria-pressed={theme === "dark"}
+      aria-checked={theme === "dark"}
+      role="switch"
     >
-      <span aria-hidden="true">{theme === "light" ? "☾" : "☀"}</span>
-      {nextTheme} mode
+      <span className="theme-label">{theme === "light" ? "Light" : "Dark"}</span>
+      <span className="theme-switch-track" aria-hidden="true">
+        <span className="theme-switch-thumb">{theme === "light" ? "☀" : "☾"}</span>
+      </span>
     </button>
   );
 }
