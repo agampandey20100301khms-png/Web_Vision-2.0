@@ -6,7 +6,7 @@ This is an independent educational project, not an official MAIT service. It is 
 
 ## What’s included
 
-- Responsive institute overview with MAIT's official logo and campus photography.
+- Responsive institute overview with MAIT's official logo and locally bundled campus photography, so images do not depend on third-party image hosts.
 - Readable typography and a light/dark appearance toggle that is saved in the browser.
 - Verified profile highlights: established in 1999, 13 engineering disciplines, and 10 campus blocks, as described in MAIT's institute profile.
 - Notice feed sourced from MAIT’s public website, with links to the original notices and dates only when published.
@@ -22,6 +22,8 @@ npm run dev
 ```
 
 The dev server uses `127.0.0.1:5173` with a strict port. Open <http://127.0.0.1:5173/>. Keep the dev process running to retain the local fallback if the hosted site is unavailable. The `/api/notices` endpoint fetches public content from MAIT, so the feed depends on MAIT’s site being reachable.
+
+The logo and campus images are served from `public/images`. Only live notices and links to official MAIT pages require an internet connection.
 
 ## Demo access
 

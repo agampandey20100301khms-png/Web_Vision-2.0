@@ -19,7 +19,7 @@ function formatDate(dateString, options = { day: "numeric", month: "short", year
 function Brand({ onClick }) {
   return (
     <button className="brand" type="button" onClick={onClick} aria-label="MAIT home">
-      <img className="brand-mark" src="https://www.mait.ac.in/images/MAIT_LOGO.png" alt="Maharaja Agrasen Institute of Technology" />
+      <img className="brand-mark" src="/images/mait-logo.png" alt="Maharaja Agrasen Institute of Technology" />
       <span className="brand-copy">
         <strong>MAIT</strong>
         <small>ROHINI · NEW DELHI</small>
@@ -175,9 +175,9 @@ function CampusFacts() {
 
 function CampusGallery() {
   const photos = [
-    { src: "https://www.mait.ac.in/images/slideshow/blockview.jpg", alt: "Academic block at the MAIT campus", className: "campus-photo-wide" },
-    { src: "https://www.mait.ac.in/images/slideshow/gm2025.jpg", alt: "A photograph featured on the official MAIT website", className: "" },
-    { src: "https://www.mait.ac.in/images/2025/09/17/photos.png", alt: "A campus photograph featured on the official MAIT website", className: "" },
+    { src: "/images/mait-campus-courtyard-small.jpg", alt: "Academic block at the MAIT campus", className: "campus-photo-wide" },
+    { src: "/images/mait-campus-event-small.jpg", alt: "A photograph featured on the official MAIT website", className: "" },
+    { src: "/images/mait-campus-community.jpg", alt: "A campus photograph featured on the official MAIT website", className: "" },
   ];
 
   return (
@@ -449,7 +449,7 @@ function HomePage({ theme, onThemeToggle, onStudentLogin, notices, loading, noti
             </div>
           </div>
           <figure className="hero-visual">
-            <img src="https://www.mait.ac.in/images/slideshow/blockview.jpg" alt="Courtyard fountain at the MAIT campus in Rohini" />
+            <img src="/images/mait-campus-courtyard-small.jpg" alt="Courtyard fountain at the MAIT campus in Rohini" />
             <figcaption><span>MAIT CAMPUS · ROHINI</span><a href={OFFICIAL_HOME_URL} target="_blank" rel="noreferrer">Photograph: official MAIT website ↗</a></figcaption>
           </figure>
         </section>
